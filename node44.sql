@@ -110,3 +110,6 @@ WHERE age =(
     
 -- cách 2 
 SELECT * FROM users ORDER BY age DESC LIMIT 1;
+
+# tet fom commit
+# tet fom commit ln 2
