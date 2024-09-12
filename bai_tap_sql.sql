@@ -613,3 +613,5 @@ WHERE
     o.order_id IS NULL
     AND l.like_res_id IS NULL
     AND r.rate_res_id IS NULL;
+
+--
