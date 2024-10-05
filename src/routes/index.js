@@ -1,13 +1,14 @@
 import express from 'express';
-import { userRoutes } from './user.router.js';
-import videosRoutes from './videos.route.js';
-import videosTypesRoutes from './videoType.route.js';
-import authRouter from './auth.router.js';
+import ordersRoutes from './orders.route.js';
+import usersRoutes from './user.route.js';
+import likesRoutes from './likes.route.js';
+import reviewsRoutes from './reviews.route.js';
 
 const rootRouter = express.Router();
 
-rootRouter.use('/users', userRoutes);
-rootRouter.use('/videos', videosRoutes);
-rootRouter.use('/video-type', videosTypesRoutes);
-rootRouter.use('/auth',authRouter);
+rootRouter.use('/orders', ordersRoutes);
+rootRouter.use('/users', usersRoutes);
+rootRouter.use('/likes', likesRoutes);
+rootRouter.use('/reviews', reviewsRoutes);
+
 export default rootRouter;

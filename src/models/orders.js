@@ -1,34 +1,14 @@
 import _sequelize from 'sequelize';
 const { Model, Sequelize } = _sequelize;
 
-export default class video extends Model {
+export default class orders extends Model {
   static init(sequelize, DataTypes) {
   return super.init({
-    video_id: {
+    order_id: {
       autoIncrement: true,
       type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true
-    },
-    video_name: {
-      type: DataTypes.STRING(255),
-      allowNull: true
-    },
-    thumbnail: {
-      type: DataTypes.STRING(255),
-      allowNull: true
-    },
-    description: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    views: {
-      type: DataTypes.INTEGER,
-      allowNull: true
-    },
-    source: {
-      type: DataTypes.STRING(255),
-      allowNull: true
     },
     user_id: {
       type: DataTypes.INTEGER,
@@ -38,17 +18,29 @@ export default class video extends Model {
         key: 'user_id'
       }
     },
-    type_id: {
+    food_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
       references: {
-        model: 'video_type',
-        key: 'type_id'
+        model: 'food',
+        key: 'food_id'
       }
+    },
+    amount: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
+    discount_code: {
+      type: DataTypes.STRING(30),
+      allowNull: true
+    },
+    arr_sub_id: {
+      type: DataTypes.STRING(255),
+      allowNull: true
     }
   }, {
     sequelize,
-    tableName: 'video',
+    tableName: 'orders',
     timestamps: false,
     indexes: [
       {
@@ -56,7 +48,7 @@ export default class video extends Model {
         unique: true,
         using: "BTREE",
         fields: [
-          { name: "video_id" },
+          { name: "order_id" },
         ]
       },
       {
@@ -67,10 +59,10 @@ export default class video extends Model {
         ]
       },
       {
-        name: "type_id",
+        name: "food_id",
         using: "BTREE",
         fields: [
-          { name: "type_id" },
+          { name: "food_id" },
         ]
       },
     ]

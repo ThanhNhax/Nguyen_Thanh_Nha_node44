@@ -1,26 +1,30 @@
 import _sequelize from 'sequelize';
 const { Model, Sequelize } = _sequelize;
 
-export default class video_type extends Model {
+export default class restaurants extends Model {
   static init(sequelize, DataTypes) {
   return super.init({
-    type_id: {
+    res_id: {
       autoIncrement: true,
       type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true
     },
-    type_name: {
+    res_name: {
       type: DataTypes.STRING(255),
       allowNull: true
     },
-    icon: {
+    image: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    description: {
       type: DataTypes.STRING(255),
       allowNull: true
     }
   }, {
     sequelize,
-    tableName: 'video_type',
+    tableName: 'restaurants',
     timestamps: false,
     indexes: [
       {
@@ -28,7 +32,7 @@ export default class video_type extends Model {
         unique: true,
         using: "BTREE",
         fields: [
-          { name: "type_id" },
+          { name: "res_id" },
         ]
       },
     ]
