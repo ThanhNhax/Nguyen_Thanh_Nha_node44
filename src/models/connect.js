@@ -6,7 +6,8 @@ const sequelize = new Sequelize(
   connectDB.user,
   connectDB.pass,
   {
-    dialect: connectDB.dialect,
+    dialect: 'mysql',
+    // dialect: connectDB.dialect,
     host: connectDB.host,
     port: connectDB.port,
   }

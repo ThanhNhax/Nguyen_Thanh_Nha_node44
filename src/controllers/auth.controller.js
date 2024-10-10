@@ -3,7 +3,12 @@ import sequelize from '../models/connect.js';
 const modal = initModels(sequelize);
 import { STATUS_CODE } from '../utils/constant.js';
 import bcrypt from 'bcrypt';
-import { createToken } from '../config/jwt.js';
+import {
+  createRefToken,
+  createRefTokenAsyncKey,
+  createToken,
+  createTokenAsyncKey,
+} from '../config/jwt.js';
 import transproter, { configEmail } from '../config/transporter.js';
 
 const hashPassword = (pass) => bcrypt.hashSync(pass, 10);
@@ -53,6 +58,19 @@ const login = async (req, res) => {
       userId: data.dataValues.user_id,
     };
     const accessToken = createToken(payload);
+    const refreshToken = createRefToken(payload);
+
+    await modal.users.update(
+      { refresh_token: refreshToken },
+      { where: { user_id: data.user_id } }
+    );
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'Lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // Thời gian tồn tại của Cookie trong miligiây
+    });
+
     return res.status(STATUS_CODE.OK).json({
       data: { accessToken, user: rest },
       message: 'Login successfully.',
@@ -157,4 +175,88 @@ const loginFacebook = async (req, res) => {
   }
 };
 
-export { login, register, loginFacebook };
+const extendToken = async (req, res) => {
+  try {
+    // lấy  refresh token từ cookie request
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) return res.status(STATUS_CODE.UNAUTHORIZED);
+
+    const checkRefreshToken = await modal.users.findOne({
+      where: { refresh_token: refreshToken },
+    });
+    if (!checkRefreshToken) return res.status(STATUS_CODE.UNAUTHORIZED);
+
+    const newToken = createToken({ userId: checkRefreshToken.user_id });
+    return res
+      .status(STATUS_CODE.OK)
+      .json({ message: 'Success', data: newToken });
+  } catch (e) {
+    return res.status(STATUS_CODE.INTERNAL_SERVER).json(e);
+  }
+};
+
+const loginAsyncKey = async (req, res) => {
+  let { email, pass } = req.body;
+
+  try {
+    if (!email.trim()) {
+      return res
+        .status(STATUS_CODE.BAD_REQUEST)
+        .json({ message: 'Email không được rỗng.' });
+    }
+    if (!pass.trim()) {
+      return res
+        .status(STATUS_CODE.BAD_REQUEST)
+        .json({ message: 'Pass không được rỗng.' });
+    }
+    let data = await modal.users.findOne({
+      where: {
+        email: email,
+      },
+    });
+    //  check user
+    if (!data) {
+      return res
+        .status(STATUS_CODE.BAD_REQUEST)
+        .json({ message: 'Email is wrong' });
+    }
+
+    const { pass_word, ...rest } = data.dataValues;
+    //check password
+    const checkPass = comparePassword(pass, pass_word);
+    if (!checkPass)
+      return res
+        .status(STATUS_CODE.BAD_REQUEST)
+        .json({ message: 'Password is wrong' });
+
+    /**
+     * tạo token
+     * param1
+     */
+    const payload = {
+      userId: data.dataValues.user_id,
+    };
+    const accessToken = createTokenAsyncKey(payload);
+    const refreshToken = createRefTokenAsyncKey(payload);
+
+    await modal.users.update(
+      { refresh_token: refreshToken },
+      { where: { user_id: data.user_id } }
+    );
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'Lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // Thời gian tồn tại của Cookie trong miligiây
+    });
+
+    return res.status(STATUS_CODE.OK).json({
+      data: { accessToken, user: rest },
+      message: 'Login successfully.',
+    });
+  } catch (e) {
+    return res.status(STATUS_CODE.INTERNAL_SERVER).json({ message: e });
+  }
+};
+
+export { login, register, loginFacebook, extendToken, loginAsyncKey };
