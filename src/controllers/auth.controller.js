@@ -9,10 +9,13 @@ import {
   createToken,
   createTokenAsyncKey,
 } from '../config/jwt.js';
-import transproter, { configEmail } from '../config/transporter.js';
+import transporter from '../config/transporter.js';
 import crypto from 'crypto';
-import { where } from 'sequelize';
 
+import { PrismaClient } from '@prisma/client';
+import speakeasy from 'speakeasy';
+
+const prisma = new PrismaClient();
 const hashPassword = (pass) => bcrypt.hashSync(pass, 10);
 
 const comparePassword = (password, hashPassword) =>
@@ -86,12 +89,9 @@ const login = async (req, res) => {
 
 const register = async (req, res) => {
   let { fullName, email, pass } = req.body;
-
-  console.log({ hashPassword });
   try {
-    console.log({ fullName, email, pass });
     // check email
-    const isEmail = await modal.users.findOne({
+    const isEmail = await prisma.users.findFirst({
       where: {
         email: email,
       },
@@ -101,43 +101,51 @@ const register = async (req, res) => {
         .status(STATUS_CODE.BAD_REQUEST)
         .json({ message: 'fullName không được rỗng.' });
     }
+
     if (!email.trim()) {
       return res
         .status(STATUS_CODE.BAD_REQUEST)
         .json({ message: 'Email không được rỗng.' });
     }
+
     if (!pass.trim()) {
       return res
         .status(STATUS_CODE.BAD_REQUEST)
         .json({ message: 'Pass không được rỗng.' });
     }
+
     if (isEmail) {
       return res
         .status(STATUS_CODE.CONFLICT)
         .json({ message: 'Email đã tồn tại. Vui lòng chọn email khác.' });
-    } else {
-      const data = await modal.users.create({
+    }
+    //tạo secret QRCode
+    const secret = speakeasy.generateSecret({ length: 15 });
+
+    const newUser = await prisma.users.create({
+      data: {
         full_name: fullName,
         email,
         pass_word: hashPassword(pass),
-      });
-      //cấu hình info email
-      const mailOption = {
-        from: 'configEmail.user',
-        to: email,
-        subject: 'Welcome to Our service',
-        text: `Hello ${fullName}. Best Regards.`,
-      };
-      transproter.sendMail(mailOption, (err, info) => {
-        if (err) {
-          return res.status(STATUS_CODE.INTERNAL_SERVER).json({ message: e });
-        }
-        const { pass_word, ...rest } = data.dataValues;
-        return res
-          .status(STATUS_CODE.OK)
-          .json({ message: 'Đăng ký thành công', data: rest });
-      });
-    }
+        secret: secret.base32,
+      },
+    });
+    //cấu hình info email
+    const mailOption = {
+      from: 'configEmail.user',
+      to: email,
+      subject: 'Welcome to Our service',
+      text: `Hello ${fullName}. Best Regards.`,
+    };
+    transporter.sendMail(mailOption, async (err, info) => {
+      if (err) {
+        return res.status(STATUS_CODE.INTERNAL_SERVER).json({ message: err });
+      }
+
+      return res
+        .status(STATUS_CODE.OK)
+        .json({ message: 'Đăng ký thành công', data: newUser });
+    });
   } catch (e) {
     return res
       .status(STATUS_CODE.INTERNAL_SERVER)
@@ -157,7 +165,6 @@ const loginFacebook = async (req, res) => {
     let user = await modal.users.findOne({
       where: { face_app_id: id },
     });
-    console.log({ user });
     if (!user) {
       const newUser = {
         full_name: name,
@@ -180,23 +187,26 @@ const loginFacebook = async (req, res) => {
 };
 
 const extendToken = async (req, res) => {
-  try {
-    // lấy  refresh token từ cookie request
-    const refreshToken = req.cookies.refreshToken;
-    if (!refreshToken) return res.status(STATUS_CODE.UNAUTHORIZED);
-
-    const checkRefreshToken = await modal.users.findOne({
-      where: { refresh_token: refreshToken },
-    });
-    if (!checkRefreshToken) return res.status(STATUS_CODE.UNAUTHORIZED);
-
-    const newToken = createToken({ userId: checkRefreshToken.user_id });
-    return res
-      .status(STATUS_CODE.OK)
-      .json({ message: 'Success', data: newToken });
-  } catch (e) {
-    return res.status(STATUS_CODE.INTERNAL_SERVER).json(e);
+  // lấy refresh token từ cookie request
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    return res.status(401);
   }
+
+  const checkRefToken = await modal.users.findOne({
+    where: {
+      refresh_token: refreshToken,
+    },
+  });
+
+  if (!checkRefToken) {
+    return res.status(401);
+  }
+
+  const newToken = createToken({ userId: checkRefToken.user_id });
+  // tạo access token mới
+  // const newToken = createTokenAsyncKey({ userId: checkRefToken.user_id });
+  return res.status(200).json({ message: 'Success', data: newToken });
 };
 
 const loginAsyncKey = async (req, res) => {
@@ -301,7 +311,7 @@ const forgotPassword = async (req, res) => {
       text: `Hệ thống gửi bạn mã code fotgot password`,
       html: `<h1>${ramdomCode}</h1>`,
     };
-    transproter.sendMail(mailOption, (err, info) => {
+    transporter.sendMail(mailOption, (err, info) => {
       if (err) {
         return res
           .status(STATUS_CODE.INTERNAL_SERVER)
@@ -371,7 +381,6 @@ const changePassword = async (req, res) => {
       .status(STATUS_CODE.OK)
       .json({ message: 'Change password successfully' });
   } catch (e) {
-    console.log(e);
     return res.status(STATUS_CODE.INTERNAL_SERVER).json({ message: e });
   }
 };

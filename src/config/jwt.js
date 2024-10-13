@@ -16,7 +16,7 @@ export default {
 };
 
 export const createToken = (data) => {
-  return jwt.sign(data, process.env.ACCESS_TOKEN_SECRET, {
+  return jwt.sign({ payload: data }, process.env.ACCESS_TOKEN_SECRET, {
     algorithm: 'HS256',
     expiresIn: '10s',
   });

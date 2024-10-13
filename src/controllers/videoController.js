@@ -1,12 +1,15 @@
 import initModels from '../models/init-models.js';
 import sequelize from '../models/connect.js';
 import { STATUS_CODE } from '../utils/constant.js';
+import { PrismaClient } from '@prisma/client';
 
-const model = initModels(sequelize);
+const model = initModels(sequelize); //Sequelize
 
+const prisma = new PrismaClient();
 const getAllVideos = async (req, res) => {
   try {
-    const data = await model.video.findAll();
+    // const data = await model.video.findAll();
+    const data = await prisma.video.findMany();
     return res.status(STATUS_CODE.OK).json(data);
   } catch (e) {
     return res
@@ -17,7 +20,6 @@ const getAllVideos = async (req, res) => {
 
 const getVideoById = async (req, res) => {
   const { id } = req.params;
-  console.log({ id });
   try {
     const data = await model.video.findOne({ video_id: id });
     return res.status(STATUS_CODE.OK).json(data);
@@ -66,9 +68,13 @@ const getVideoPage = async (req, res) => {
       return res.status(400).json({ messasge: 'size is wrong' });
     }
     let index = (page - 1) * size;
-    let data = await model.video.findAll({
-      offset: index,
-      limit: size,
+    // let data = await model.video.findAll({
+    //   offset: index,
+    //   limit: size,
+    // });
+    const data = prisma.video.findMany({
+      skip: index,
+      take: size,
     });
     const pagination = {
       total: await model.video.count(),

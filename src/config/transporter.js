@@ -8,7 +8,7 @@ export const configEmail = {
   pass: process.env.EMAIL_PASS,
 };
 
-const transproter = nodemailer.createTransport({
+const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: configEmail.user,
@@ -16,4 +16,4 @@ const transproter = nodemailer.createTransport({
   },
 });
 
-export default transproter;
+export default transporter;
