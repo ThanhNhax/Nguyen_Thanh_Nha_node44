@@ -12,11 +12,11 @@ let refreshTokenPublicKey = fs.readFileSync('refresh_token.public.key');
 dotenv.config();
 
 export default {
-  secretKey: process.env.SECRET_KEY,
+  secretKey: process.env.ACCESS_TOKEN_SECRET,
 };
 
 export const createToken = (data) => {
-  return jwt.sign(data, process.env.SECRET_KEY, {
+  return jwt.sign(data, process.env.ACCESS_TOKEN_SECRET, {
     algorithm: 'HS256',
     expiresIn: '10s',
   });
@@ -24,14 +24,14 @@ export const createToken = (data) => {
 
 export const verifyToken = (data) => {
   try {
-    return jwt.verify(data, process.env.SECRET_KEY);
+    return jwt.verify(data, process.env.ACCESS_TOKEN_SECRET);
   } catch (e) {
     return { error: e };
   }
 };
 
 export const createRefToken = (data) => {
-  return jwt.sign({ payload: data }, process.env.REFTOKEN, {
+  return jwt.sign({ payload: data }, process.env.REFRESH_TOKEN_SECRET, {
     algorithm: 'HS256',
     expiresIn: '7d',
   });

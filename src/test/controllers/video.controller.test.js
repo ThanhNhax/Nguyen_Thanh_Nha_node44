@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, it } from 'mocha';
 import sinon from 'sinon';
-import { getAllVideos } from '../controllers/videoController.js';
+import { getAllVideos } from '../../../src/controllers/videoController.js';
 import { expect } from 'chai';
-import initModels from '../../src/models/init-models.js';
-import sequelize from '../../src/models/connect.js';
+import initModels from '../../../src/models/init-models.js';
+import sequelize from '../../../src/models/connect.js';
 
 const model = initModels(sequelize);
 

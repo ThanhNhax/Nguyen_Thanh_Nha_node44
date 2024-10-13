@@ -10,6 +10,8 @@ import {
   createTokenAsyncKey,
 } from '../config/jwt.js';
 import transproter, { configEmail } from '../config/transporter.js';
+import crypto from 'crypto';
+import { where } from 'sequelize';
 
 const hashPassword = (pass) => bcrypt.hashSync(pass, 10);
 
@@ -25,11 +27,13 @@ const login = async (req, res) => {
         .status(STATUS_CODE.BAD_REQUEST)
         .json({ message: 'Email không được rỗng.' });
     }
+
     if (!pass.trim()) {
       return res
         .status(STATUS_CODE.BAD_REQUEST)
         .json({ message: 'Pass không được rỗng.' });
     }
+
     let data = await modal.users.findOne({
       where: {
         email: email,
@@ -259,4 +263,125 @@ const loginAsyncKey = async (req, res) => {
   }
 };
 
-export { login, register, loginFacebook, extendToken, loginAsyncKey };
+const forgotPassword = async (req, res) => {
+  const { email } = req?.body;
+
+  try {
+    if (!email) {
+      throw new Error('Email is wrong');
+    }
+    let checkEmail = await modal.users.findOne({
+      where: {
+        email,
+      },
+    });
+    if (!checkEmail) {
+      return res
+        .status(STATUS_CODE.BAD_REQUEST)
+        .json({ message: 'Email not found' });
+      return;
+    }
+    // tạo code
+    const ramdomCode = crypto.randomBytes(5).toString('hex');
+
+    //Tạo biến lưu expired code
+    const expired = new Date(new Date().getTime() + 1 * 60 * 60 * 1000);
+    // lưu code vào database
+    await modal.code.create({
+      code: ramdomCode,
+      expired,
+    });
+
+    //send email
+    //cấu hình info email
+    const mailOption = {
+      from: 'configEmail.user',
+      to: email,
+      subject: 'Mã xác thực',
+      text: `Hệ thống gửi bạn mã code fotgot password`,
+      html: `<h1>${ramdomCode}</h1>`,
+    };
+    transproter.sendMail(mailOption, (err, info) => {
+      if (err) {
+        return res
+          .status(STATUS_CODE.INTERNAL_SERVER)
+          .json({ message: 'Send email error' });
+      }
+      return res
+        .status(STATUS_CODE.OK)
+        .json({ message: 'Please check your email.', statusCode: 200 });
+    });
+  } catch (error) {
+    return res
+      .status(STATUS_CODE.INTERNAL_SERVER)
+      .json({ message: error.message });
+  }
+};
+const changePassword = async (req, res) => {
+  const { code, newPassword, email } = req.body;
+  try {
+    const checkCode = await modal.code.findOne({
+      where: {
+        code,
+      },
+    });
+
+    if (!checkCode) {
+      return res
+        .status(STATUS_CODE.BAD_REQUEST)
+        .json({ message: 'Code is wrong.' });
+    }
+
+    //kiểm tra expired còn dài thời không
+    // Thời gian hiện tại
+    const currentTime = new Date();
+    // So sánh thời điểm hết hạn với thời gian hiện tại
+    if (currentTime.getTime() >= new Date(checkCode.expired)) {
+      return res
+        .status(STATUS_CODE.BAD_REQUEST)
+        .json({ message: 'Code has expired.' });
+    }
+    // kiểm tra email có tồn tại trong DB không
+    const checkEmail = await modal.users.findOne({
+      where: {
+        email,
+      },
+    });
+    if (!checkEmail) {
+      return res
+        .status(STATUS_CODE.BAD_REQUEST)
+        .json({ message: 'Email is wrong.' });
+    }
+
+    //hash password
+    const newHashPassword = hashPassword(newPassword);
+
+    // update password
+    checkEmail.pass_word = newHashPassword;
+    checkEmail.save();
+
+    //remote code
+    await modal.code.destroy({
+      where: {
+        code,
+      },
+    });
+
+    return res
+      .status(STATUS_CODE.OK)
+      .json({ message: 'Change password successfully' });
+  } catch (e) {
+    console.log(e);
+    return res.status(STATUS_CODE.INTERNAL_SERVER).json({ message: e });
+  }
+};
+
+export {
+  login,
+  register,
+  loginFacebook,
+  extendToken,
+  loginAsyncKey,
+  forgotPassword,
+  changePassword,
+};
