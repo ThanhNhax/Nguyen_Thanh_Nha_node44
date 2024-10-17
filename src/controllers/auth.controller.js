@@ -24,66 +24,81 @@ const comparePassword = (password, hashPassword) =>
 const login = async (req, res) => {
   let { email, pass } = req.body;
 
+  // Hàm tiện ích để kiểm tra đầu vào
+  const validateInput = (input, message) => {
+    if (!input.trim()) {
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message });
+    }
+  };
+
+  // Hàm kiểm tra định dạng email
+  const validateEmail = (email) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
+
   try {
-    if (!email.trim()) {
+    validateInput(email, 'Email không được rỗng.');
+    validateInput(pass, 'Password không được rỗng.');
+
+    // Kiểm tra định dạng email
+    if (!validateEmail(email)) {
       return res
         .status(STATUS_CODE.BAD_REQUEST)
-        .json({ message: 'Email không được rỗng.' });
+        .json({ message: 'Email không đúng định dạng.' });
     }
 
-    if (!pass.trim()) {
+    // Kiểm tra độ dài mật khẩu
+    if (pass.length < 6) {
       return res
         .status(STATUS_CODE.BAD_REQUEST)
-        .json({ message: 'Pass không được rỗng.' });
+        .json({ message: 'Mật khẩu phải có ít nhất 6 ký tự.' });
     }
 
-    let data = await modal.users.findOne({
-      where: {
-        email: email,
-      },
-    });
-    //  check user
-    if (!data) {
+    const user = await modal.users.findOne({ where: { email } });
+
+    // Kiểm tra xem người dùng có tồn tại
+    if (!user) {
       return res
         .status(STATUS_CODE.BAD_REQUEST)
-        .json({ message: 'Email is wrong' });
+        .json({ message: 'Email không đúng' });
     }
 
-    const { pass_word, ...rest } = data.dataValues;
-    //check password
-    const checkPass = comparePassword(pass, pass_word);
-    if (!checkPass)
+    const { pass_word, refresh_token, ...rest } = user.dataValues;
+
+    // Kiểm tra mật khẩu
+    const isPasswordValid = comparePassword(pass, pass_word);
+    if (!isPasswordValid) {
       return res
         .status(STATUS_CODE.BAD_REQUEST)
-        .json({ message: 'Password is wrong' });
+        .json({ message: 'Mật khẩu không đúng' });
+    }
 
-    /**
-     * tạo token
-     * param1
-     */
-    const payload = {
-      userId: data.dataValues.user_id,
-    };
+    // Tạo token
+    const payload = { userId: user.dataValues.user_id };
     const accessToken = createToken(payload);
     const refreshToken = createRefToken(payload);
 
     await modal.users.update(
       { refresh_token: refreshToken },
-      { where: { user_id: data.user_id } }
+      { where: { user_id: user.user_id } }
     );
+
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: false,
       sameSite: 'Lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // Thời gian tồn tại của Cookie trong miligiây
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
     });
 
     return res.status(STATUS_CODE.OK).json({
       data: { accessToken, user: rest },
-      message: 'Login successfully.',
+      message: 'Đăng nhập thành công.',
     });
   } catch (e) {
-    return res.status(STATUS_CODE.INTERNAL_SERVER).json({ message: e });
+    return res
+      .status(STATUS_CODE.INTERNAL_SERVER)
+      .json({ message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -189,8 +204,9 @@ const loginFacebook = async (req, res) => {
 const extendToken = async (req, res) => {
   // lấy refresh token từ cookie request
   const refreshToken = req.cookies.refreshToken;
+  console.log({ refreshToken });
   if (!refreshToken) {
-    return res.status(401);
+    return res.status(400).json({ mesage: 'không có refreshToken ở cookie' });
   }
 
   const checkRefToken = await modal.users.findOne({
@@ -198,9 +214,9 @@ const extendToken = async (req, res) => {
       refresh_token: refreshToken,
     },
   });
-
+  console.log({ checkRefToken });
   if (!checkRefToken) {
-    return res.status(401);
+    return res.status(400).json({ mesage: 'không có refreshToken ở DB' });
   }
 
   const newToken = createToken({ userId: checkRefToken.user_id });

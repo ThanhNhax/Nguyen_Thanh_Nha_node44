@@ -6,6 +6,7 @@ import {
   getVideoById,
   getVideoPage,
 } from '../controllers/videoController.js';
+import { middleWaretoken } from '../middleWare/token.js';
 
 const videosRoutes = express.Router();
 

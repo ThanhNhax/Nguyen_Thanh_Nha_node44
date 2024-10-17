@@ -2,7 +2,7 @@ import { join } from '@prisma/client/runtime/library';
 import { verifyToken } from '../config/jwt.js';
 import { STATUS_CODE } from '../utils/constant.js';
 
-export const middleWretoken = (req, res, next) => {
+export const middleWaretoken = (req, res, next) => {
   try {
     let { token } = req.headers;
     if (!token) {
@@ -18,16 +18,5 @@ export const middleWretoken = (req, res, next) => {
     next();
   } catch (e) {
     res.status(STATUS_CODE.UNAUTHORIZED).json(e);
-  }
-};
-
-export const middleWareToken = (req, res, next) => {
-  let { token } = req.headers;
-  let checkToken = verifyToken(token);
-  if (checkToken) {
-    // nếu token hợp lệ => pass => qua router
-    next();
-  } else {
-    return res.status(401).json({ message: 'Unauthorized' });
   }
 };
