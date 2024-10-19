@@ -4,7 +4,9 @@ import { STATUS_CODE } from '../utils/constant.js';
 
 export const middlewareToken = (req, res, next) => {
   let { token } = req.headers;
+  console.log({ token });
   let checkToken = verifyToken(token);
+  console.log({ checkToken });
   if (checkToken) {
     // nếu token hợp lệ => pass => qua router
     next();

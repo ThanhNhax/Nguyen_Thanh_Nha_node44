@@ -68,5 +68,37 @@ const deleteUser = async (req, res) => {
     return res.status(STATUS_CODE.INTERNAL_SERVER).json({ e });
   }
 };
+const uploadAvatar = async (req, res) => {
+  try {
+    let file = req.file;
+    console.log('get req: ', req.body.userId);
+    let userId = req.body.userId;
+    let user = await prisma.users.findFirst({
+      where: { user_id: +userId },
+    });
 
-export { getUser, createUser, deleteUser };
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+
+    // update column avatar trong table users
+    let avatarPath = `/public/imgs/${file.filename}`;
+    await prisma.users.update({
+      data: {
+        avatar: avatarPath,
+      },
+      where: {
+        user_id: Number(userId), // phải ép kiểu về đúng datatype của column
+      },
+    });
+    return res.status(200).json({
+      data: avatarPath,
+      message: 'Upload avatar successfully',
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: 'error api upload avatar' });
+  }
+};
+
+export { getUser, createUser, deleteUser, uploadAvatar };

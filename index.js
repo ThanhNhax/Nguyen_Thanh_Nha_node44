@@ -5,6 +5,9 @@ import cookieParser from 'cookie-parser';
 const app = express();
 const port = 8080;
 
+//difine middleware để public folter public
+app.use(express.static('.s'));
+
 app.use(
   cors({
     origin: 'http://localhost:3000', //cấp quyền cho FE

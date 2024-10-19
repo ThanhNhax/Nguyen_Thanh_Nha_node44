@@ -24,7 +24,7 @@ export const createToken = (data) => {
 
 export const verifyToken = (token) => {
   try {
-    jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     return true;
   } catch (error) {
     // không verify được token
