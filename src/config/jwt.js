@@ -22,11 +22,13 @@ export const createToken = (data) => {
   });
 };
 
-export const verifyToken = (data) => {
+export const verifyToken = (token) => {
   try {
-    return jwt.verify(data, process.env.ACCESS_TOKEN_SECRET);
-  } catch (e) {
-    return { error: e };
+    jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
+    return true;
+  } catch (error) {
+    // không verify được token
+    return false;
   }
 };
 
