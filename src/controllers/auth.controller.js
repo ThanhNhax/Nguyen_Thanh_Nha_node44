@@ -22,8 +22,8 @@ const comparePassword = (password, hashPassword) =>
   bcrypt.compareSync(password, hashPassword);
 
 const login = async (req, res) => {
-  let { email, pass } = req.body;
-
+  let { email, pass, code } = req.body;
+  console.log({ email, pass, code });
   // Hàm tiện ích để kiểm tra đầu vào
   const validateInput = (input, message) => {
     if (!input.trim()) {
@@ -55,7 +55,9 @@ const login = async (req, res) => {
         .json({ message: 'Mật khẩu phải có ít nhất 6 ký tự.' });
     }
 
-    const user = await modal.users.findOne({ where: { email } });
+    let user = await prisma.users.findFirst({
+      where: { email },
+    });
 
     // Kiểm tra xem người dùng có tồn tại
     if (!user) {
@@ -64,7 +66,7 @@ const login = async (req, res) => {
         .json({ message: 'Email không đúng' });
     }
 
-    const { pass_word, refresh_token, ...rest } = user.dataValues;
+    const { pass_word, refresh_token, ...rest } = user;
 
     // Kiểm tra mật khẩu
     const isPasswordValid = comparePassword(pass, pass_word);
@@ -73,9 +75,23 @@ const login = async (req, res) => {
         .status(STATUS_CODE.BAD_REQUEST)
         .json({ message: 'Mật khẩu không đúng' });
     }
+    console.log({ user });
+    // check code được nhập từ request:
+    const verified = speakeasy.totp.verify({
+      secret: user.secret,
+      encoding: 'base32',
+      token: code, //laấy từ google authenticator
+    });
+
+    console.log({ verified });
+    if (!verified) {
+      return res
+        .status(STATUS_CODE.BAD_REQUEST)
+        .json({ message: 'Invalid 2FA' });
+    }
 
     // Tạo token
-    const payload = { userId: user.dataValues.user_id };
+    const payload = { userId: user.user_id };
     const accessToken = createToken(payload);
     const refreshToken = createRefToken(payload);
 
@@ -96,6 +112,7 @@ const login = async (req, res) => {
       message: 'Đăng nhập thành công.',
     });
   } catch (e) {
+    console.log({ e });
     return res
       .status(STATUS_CODE.INTERNAL_SERVER)
       .json({ message: 'Lỗi máy chủ nội bộ' });
