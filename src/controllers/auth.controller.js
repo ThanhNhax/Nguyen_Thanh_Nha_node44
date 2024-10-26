@@ -221,7 +221,7 @@ const loginFacebook = async (req, res) => {
 const extendToken = async (req, res) => {
   // lấy refresh token từ cookie request
   const refreshToken = req.cookies.refreshToken;
-  console.log({ refreshToken });
+
   if (!refreshToken) {
     return res.status(400).json({ mesage: 'không có refreshToken ở cookie' });
   }
@@ -231,7 +231,7 @@ const extendToken = async (req, res) => {
       refresh_token: refreshToken,
     },
   });
-  console.log({ checkRefToken });
+
   if (!checkRefToken) {
     return res.status(400).json({ mesage: 'không có refreshToken ở DB' });
   }

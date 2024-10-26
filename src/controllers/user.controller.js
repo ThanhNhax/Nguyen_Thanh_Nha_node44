@@ -15,12 +15,25 @@ const getUser = async (req, res) => {
     //return res.status(200).json(data);
     let data = await model.users.findAll({
       where: {
-        // full_name: 'John Doe',
         full_name: {
           [Op.like]: `%${full_name}%`,
         },
       },
-      include: [{ model: model.video, as: 'videos' }],
+      // attributes: ["full_name"],
+      // include: [
+      //     {
+      //         model: model.video, // chọn model mà muốn kết bảng
+      //         as: 'videos',
+      //         attributes: ['video_name', 'user_id'], // chỉ định những column nào sẽ hiển thị
+      //         required: true, // default sẽ kết bảng theo left join, muôn inner join thì required: true
+      //         include: [
+      //             {
+      //                 model: model.video_comment,
+      //                 as: 'video_comments'
+      //             }
+      //         ]
+      //     }
+      // ]
     });
 
     return res.status(200).json(data);
