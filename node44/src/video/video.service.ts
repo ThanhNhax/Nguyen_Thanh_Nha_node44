@@ -9,8 +9,15 @@ import { plainToClass } from 'class-transformer';
 export class VideoService {
   pisma = new PrismaClient();
 
-  create(createVideoDto: CreateVideoDto) {
-    return 'This action adds a new video';
+  async create(createVideoDto: CreateVideoDto): Promise<VideoDto> {
+    try {
+      const newVideo = await this.pisma.video.create({
+        data: createVideoDto,
+      });
+      return newVideo;
+    } catch (error) {
+      throw new Error(error.message);
+    }
   }
 
   async findAll({
@@ -49,7 +56,19 @@ export class VideoService {
     return `This action updates a #${id} video`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} video`;
+  async getVideoType() {
+    return await this.pisma.video_type.findMany();
+  }
+
+  async getVideos() {
+    return await this.pisma.video.findMany();
+  }
+
+  async getVideoTypeById(id: number) {
+    return await this.pisma.video_type.findFirst({ where: { type_id: id } });
+  }
+
+  async getVideoById(id: number) {
+    return await this.pisma.video.findFirst({ where: { video_id: id } });
   }
 }
