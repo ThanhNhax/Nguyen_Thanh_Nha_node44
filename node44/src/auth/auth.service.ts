@@ -13,6 +13,7 @@ import { plainToClass } from 'class-transformer';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { UserService } from 'src/user/user.service';
 import { ConfigService } from '@nestjs/config';
+import { KeyService } from 'src/key/key.service';
 
 @Injectable()
 export class AuthService {
@@ -22,6 +23,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private userService: UserService,
     private configServise: ConfigService,
+    private keyService: KeyService,
   ) {}
 
   async login({ email, pass: pass_word }: LoginAuthDto) {
@@ -34,9 +36,10 @@ export class AuthService {
         sub: user.user_id,
       };
       // Tạo token
-      const accessToken = await this.jwtService.signAsync(payload, {
+      const accessToken = this.jwtService.sign(payload, {
         expiresIn: this.configServise.get('EXPIRES_IN'),
-        secret: this.configServise.get('SECRET_KEY'),
+        secret: this.keyService.getPrivateKey(),
+        algorithm: 'RS256',
       });
 
       return {

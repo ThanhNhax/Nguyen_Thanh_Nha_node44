@@ -12,25 +12,40 @@ import {
   Req,
   Headers,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  UploadedFiles,
 } from '@nestjs/common';
 import { VideoService } from './video.service';
-import { CreateVideoDto } from './dto/create-video.dto';
+import {
+  CreateVideoDto,
+  FilesUploadDto,
+  FileUploadDto,
+} from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
-import { Request, Response } from 'express';
+import { Request, Response, Express } from 'express';
 import { VideoDto } from './dto/video.dto';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiParam,
   ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { getStorageOptions } from 'src/shared/upload.service';
+import { CloudinaryService } from 'src/shared/cloudinary.service';
 
 @Controller()
 @ApiTags('Video')
 export class VideoController {
-  constructor(private readonly videoService: VideoService) {}
+  constructor(
+    private readonly videoService: VideoService,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
@@ -81,5 +96,57 @@ export class VideoController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateVideoDto: UpdateVideoDto) {
     return this.videoService.update(+id, updateVideoDto);
+  }
+
+  @Post('/upload-thumbnail')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    type: FileUploadDto,
+    required: true,
+  })
+  @UseInterceptors(
+    FileInterceptor('hinhAnh', { storage: getStorageOptions('videos') }),
+  )
+  uploadThumbnail(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response,
+  ) {
+    return res.status(200).json(file);
+  }
+
+  @Post('/upload-multi-thumbnail')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    type: FilesUploadDto,
+    required: true,
+  })
+  @UseInterceptors(
+    FilesInterceptor('hinhAnh', 20, { storage: getStorageOptions('videos') }),
+  )
+  uploadMuitilpleThumbnail(
+    @UploadedFiles() file: Express.Multer.File[],
+    @Res() res: Response,
+  ) {
+    return res.status(200).json(file);
+  }
+
+  @Post('/upload-thumbnail-cloud')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    type: FileUploadDto,
+    required: true,
+  })
+  @UseInterceptors(FileInterceptor('hinhAnh'))
+  async uploadThumbnailCloud(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.cloudinaryService.uploadImage(file, 'videos');
+      return res.status(200).json(result);
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ message: 'Upload failed' });
+    }
   }
 }
